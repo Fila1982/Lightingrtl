@@ -249,12 +249,14 @@ export class RTLEffects implements OnDestroy {
   saveNewInvoice = this.actions$.pipe(
     ofType(RTLActions.SAVE_NEW_INVOICE),
     mergeMap((action: RTLActions.SaveNewInvoice) => {
-      return this.httpClient.post(environment.INVOICES_API, {memo: action.payload.memo, amount: action.payload.invoiceValue, private: action.payload.private})
+      return this.httpClient.post(environment.INVOICES_API, {
+        memo: action.payload.memo, amount: action.payload.invoiceValue, private: action.payload.private, expiry: action.payload.expiry
+      })
       .pipe(
         map((postRes: any) => {
           postRes.memo = action.payload.memo;
           postRes.value = action.payload.invoiceValue;
-          postRes.expiry = '3600';
+          postRes.expiry = action.payload.expiry;
           postRes.cltv_expiry = '144';
           postRes.creation_date = Math.round(new Date().getTime() / 1000).toString();
           postRes.creation_date_str =  new Date(+postRes.creation_date * 1000).toUTCString();
@@ -383,6 +385,102 @@ export class RTLEffects implements OnDestroy {
               type: RTLActions.OPEN_ALERT,
               payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Close Channel. Try again later.',
                 message: JSON.stringify({code: err.status, Message: err.error.error.message})}}
+            }
+          );
+        })
+      );
+    }
+  ));
+
+  @Effect()
+  backupChannels = this.actions$.pipe(
+    ofType(RTLActions.BACKUP_CHANNELS),
+    mergeMap((action: RTLActions.BackupChannels) => {
+      this.store.dispatch(new RTLActions.ClearEffectError('BackupChannels'));
+      return this.httpClient.get(environment.CHANNELS_BACKUP_API + '/' + action.payload.channelPoint)
+      .pipe(
+        map((postRes: any) => {
+          this.logger.info(postRes);
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: postRes.message}}));
+          return {
+            type: RTLActions.BACKUP_CHANNELS_RES,
+            payload: postRes.message
+          };
+        }),
+        catchError((err: any) => {
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.logger.error(err);
+          this.store.dispatch(new RTLActions.EffectError({ action: 'BackupChannels', code: err.status, message: err.error.error }));
+          return of(
+            {
+              type: RTLActions.OPEN_ALERT,
+              payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Backup Channel. Try again later.',
+                message: JSON.stringify({code: err.status, Message: err.error.message})}}
+            }
+          );
+        })
+      );
+    }
+  ));
+
+  @Effect()
+  verifyChannels = this.actions$.pipe(
+    ofType(RTLActions.VERIFY_CHANNELS),
+    mergeMap((action: RTLActions.VerifyChannels) => {
+      this.store.dispatch(new RTLActions.ClearEffectError('VerifyChannels'));
+      return this.httpClient.post(environment.CHANNELS_BACKUP_API + '/verify/' + action.payload.channelPoint, {})
+      .pipe(
+        map((postRes: any) => {
+          this.logger.info(postRes);
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: postRes.message}}));
+          return {
+            type: RTLActions.VERIFY_CHANNELS_RES,
+            payload: postRes.message
+          };
+        }),
+        catchError((err: any) => {
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.logger.error(err);
+          this.store.dispatch(new RTLActions.EffectError({ action: 'VerifyChannels', code: err.status, message: err.error.error }));
+          return of(
+            {
+              type: RTLActions.OPEN_ALERT,
+              payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Verify Channel. Try again later.',
+                message: JSON.stringify({code: err.status, Message: err.error.message})}}
+            }
+          );
+        })
+      );
+    }
+  ));
+
+  @Effect()
+  uploadChannels = this.actions$.pipe(
+    ofType(RTLActions.UPLOAD_CHANNELS),
+    mergeMap((action: RTLActions.UploadChannels) => {
+      this.store.dispatch(new RTLActions.ClearEffectError('UploadChannels'));
+      return this.httpClient.post(environment.CHANNELS_BACKUP_API + '/upload/' + action.payload.channelPoint, {})
+      .pipe(
+        map((postRes: any) => {
+          this.logger.info(postRes);
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: postRes.message}}));
+          return {
+            type: RTLActions.UPLOAD_CHANNELS_RES,
+            payload: postRes.message
+          };
+        }),
+        catchError((err: any) => {
+          this.store.dispatch(new RTLActions.CloseSpinner());
+          this.logger.error(err);
+          this.store.dispatch(new RTLActions.EffectError({ action: 'UploadChannels', code: err.status, message: err.error.error }));
+          return of(
+            {
+              type: RTLActions.OPEN_ALERT,
+              payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Upload Channel. Try again later.',
+                message: JSON.stringify({code: err.status, Message: err.error.error})}}
             }
           );
         })
@@ -552,7 +650,7 @@ export class RTLEffects implements OnDestroy {
       this.logger.info(payments);
       return {
         type: RTLActions.SET_PAYMENTS,
-        payload: (undefined !== payments) ? payments : []
+        payload: (undefined !== payments && null != payments) ? payments : []
       };
     }),
     catchError((err: any) => {
@@ -1153,7 +1251,7 @@ export class RTLEffects implements OnDestroy {
    }
  ));
 
-  SetToken(token: string) {
+ SetToken(token: string) {
     if (token) {
       sessionStorage.setItem('lndUnlocked', 'true');
       sessionStorage.setItem('token', token);

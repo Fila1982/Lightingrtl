@@ -69,8 +69,8 @@ export class PaymentsComponent implements OnInit, OnDestroy {
       });
       this.selNode = rtlStore.selNode;
       this.information = rtlStore.information;
-      this.paymentJSONArr = (rtlStore.payments.length > 0) ? rtlStore.payments : [];
-      this.payments = (undefined === rtlStore.payments) ?  new MatTableDataSource([]) : new MatTableDataSource<Payment>([...this.paymentJSONArr]);
+      this.paymentJSONArr = (null !== rtlStore.payments && rtlStore.payments.length > 0) ? rtlStore.payments : [];
+      this.payments = (undefined === rtlStore.payments || null == rtlStore.payments) ?  new MatTableDataSource([]) : new MatTableDataSource<Payment>([...this.paymentJSONArr]);
       this.payments.data = this.paymentJSONArr;
       this.payments.sort = this.sort;
       this.payments.data.forEach(payment => {

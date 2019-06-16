@@ -11,6 +11,7 @@ var upperCase = require('upper-case');
 var logger = require('./controllers/logger');
 var connect = {};
 var errMsg = '';
+const channelsBackup = require('./controllers/channelsBackup');
 
 connect.setDefaultConfig = () => {
   var homeDir = os.userInfo().homedir;
@@ -48,6 +49,7 @@ connect.setDefaultConfig = () => {
       menuType: 'Regular',
       theme: 'dark-blue',
       satsToBTC: false,
+      channelBackupPath: homeDir + '/backup/node-0',
       lndServerUrl: 'https://localhost:8080/v1',
       enableLogging: false,
       port: 3000
@@ -171,7 +173,33 @@ connect.validateSingleNodeConfig = (config) => {
     }
   }
 
-	if (undefined !== process.env.RTL_PASS) {
+  if(undefined !== process.env.CHANNEL_BACKUP_PATH) {
+    common.nodes[0].channel_backup_path = process.env.CHANNEL_BACKUP_PATH;
+  } else {
+    if(config.Settings.channelBackupPath !== '' &&  undefined !== config.Settings.channelBackupPath) {
+      common.nodes[0].channel_backup_path = config.Settings.channelBackupPath;
+    } else {
+      common.nodes[0].channel_backup_path = common.rtl_conf_file_path + '/backup/node-0';
+    }
+    try {
+      connect.createDirectory(node.Settings.channelBackupPath);
+      let exists = fs.existsSync(common.nodes[0].channel_backup_path + '/all-channels.bak');
+      if (exists) {
+        fs.writeFile(common.nodes[0].channel_backup_path + '/all-channels.bak', '', () => { });
+      } else {
+        try {
+          var createStream = fs.createWriteStream(common.nodes[0].channel_backup_path + '/all-channels.bak');
+          createStream.end();
+        } catch (err) {
+          console.error('Something went wrong while creating backup file: \n' + err);
+        }
+      }    
+    } catch (err) {
+      console.error('Something went wrong while creating backup file: \n' + err);
+    }
+  }
+
+  if (undefined !== process.env.RTL_PASS) {
 		common.rtl_pass = process.env.RTL_PASS;
 	} else if (config.Authentication.rtlPassHashed !== '' && undefined !== config.Authentication.rtlPassHashed) {
 		common.rtl_pass = config.Authentication.rtlPassHashed;
@@ -253,6 +281,23 @@ connect.validateMultiNodeConfig = (config) => {
     common.nodes[idx].lnd_config_path = (undefined !== node.Authentication.lndConfigPath) ? node.Authentication.lndConfigPath : '';
     common.nodes[idx].bitcoind_config_path = (undefined !== node.Settings.bitcoindConfigPath) ? node.Settings.bitcoindConfigPath : '';
     common.nodes[idx].enable_logging = (undefined !== node.Settings.enableLogging) ? node.Settings.enableLogging : false;
+    common.nodes[idx].channel_backup_path = (undefined !== node.Settings.channelBackupPath) ? node.Settings.channelBackupPath : common.rtl_conf_file_path + '/backup/node-' + idx;
+    try {
+      connect.createDirectory(node.Settings.channelBackupPath);
+      let exists = fs.existsSync(common.nodes[idx].channel_backup_path + '/all-channels.bak');
+      if (exists) {
+        fs.writeFile(common.nodes[idx].channel_backup_path + '/all-channels.bak', '', () => { });
+      } else {
+        try {
+          var createStream = fs.createWriteStream(common.nodes[idx].channel_backup_path + '/all-channels.bak');
+          createStream.end();
+        } catch (err) {
+          console.error('Something went wrong while creating backup file: \n' + err);
+        }
+      }    
+    } catch (err) {
+      console.error('Something went wrong while creating backup file: \n' + err);
+    }
 
     if (common.nodes[idx].enable_logging) {
       common.nodes[idx].log_file = common.rtl_conf_file_path + '/logs/RTL-Node-' + node.index + '.log';
@@ -304,7 +349,15 @@ connect.setSSOParams = (config) => {
 
 connect.createDirectory = (dirname) => {
   try {
-    fs.mkdirSync(dirname);
+    const sep = path.sep;
+    const initDir = path.isAbsolute(dirname) ? sep : '';
+    dirname.split(sep).reduce((parentDir, childDir) => {
+      const curDir = path.resolve(parentDir, childDir);
+      if (!fs.existsSync(curDir)) {
+        fs.mkdirSync(curDir);
+      }
+      return curDir;
+    }, initDir);
   } catch (err) {
     if (err.code === 'EEXIST') {
       return dirname;
@@ -361,6 +414,7 @@ connect.logEnvVariables = () => {
       logger.info('\r\nConfig Setup Variable RTL_CONFIG_PATH: ' + node.rtl_conf_file_path, node);
       logger.info('\r\nConfig Setup Variable LND_CONFIG_PATH: ' + node.lnd_config_path, node);
       logger.info('\r\nConfig Setup Variable BITCOIND_CONFIG_PATH: ' + node.bitcoind_config_path, node);
+      logger.info('\r\nConfig Setup Variable CHANNEL_BACKUP_PATH: ' + node.channel_backup_path, node);
     });  
   } else {
     if (!common.nodes[0].enable_logging) { return; }
@@ -372,6 +426,7 @@ connect.logEnvVariables = () => {
     logger.info('\r\nConfig Setup Variable LND_CONFIG_PATH: ' + common.nodes[0].lnd_config_path);
     logger.info('\r\nConfig Setup Variable RTL_CONFIG_PATH: ' + common.rtl_conf_file_path);
     logger.info('\r\nConfig Setup Variable BITCOIND_CONFIG_PATH: ' + common.nodes[0].bitcoind_config_path);
+    logger.info('\r\nConfig Setup Variable CHANNEL_BACKUP_PATH: ' + common.nodes[0].channel_backup_path);
     logger.info('\r\nConfig Setup Variable RTL_SSO: ' + common.rtl_sso);
     logger.info('\r\nConfig Setup Variable RTL_COOKIE_PATH: ' + common.rtl_cookie_path);
     logger.info('\r\nConfig Setup Variable LOGOUT_REDIRECT_LINK: ' + common.logout_redirect_link);
