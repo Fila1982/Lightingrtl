@@ -21,7 +21,7 @@ import * as fromRTLReducer from '../../../shared/store/rtl.reducers';
 })
 export class ChannelBackupComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort) sort: MatSort;
-  public displayedColumns = ['chan_id', 'backup', 'verify', 'upload'];
+  public displayedColumns = ['chan_id', 'backup', 'verify'];
   public selChannel: Channel;
   public channels: any;
   public flgLoading: Array<Boolean | 'error'> = [true]; // 0: channels
@@ -62,7 +62,7 @@ export class ChannelBackupComponent implements OnInit, OnDestroy {
 
   onBackupChannels(selChannel: Channel) {
     this.store.dispatch(new RTLActions.OpenSpinner('Backup Channels...'));
-    this.store.dispatch(new RTLActions.BackupChannels({channelPoint: (selChannel.channel_point) ? selChannel.channel_point : 'ALL'}));
+    this.store.dispatch(new RTLActions.BackupChannels({channelPoint: (selChannel.channel_point) ? selChannel.channel_point : 'ALL', showMessage: ''}));
   }
 
   onVerifyChannels(selChannel: Channel) {
@@ -70,16 +70,10 @@ export class ChannelBackupComponent implements OnInit, OnDestroy {
     this.store.dispatch(new RTLActions.VerifyChannels({channelPoint: (selChannel.channel_point) ? selChannel.channel_point : 'ALL'}));
   }
 
-  onUploadBackup(selChannel: Channel) {
-    this.store.dispatch(new RTLActions.OpenSpinner('Upload Channels...'));
-    this.store.dispatch(new RTLActions.UploadChannels({channelPoint: (selChannel.channel_point) ? selChannel.channel_point : 'ALL'}));
-  }
-
   onChannelClick(selRow: Channel, event: any) {
     const flgButtonsClicked = event.target.className.includes('mat-icon')
       || event.target.className.includes('mat-column-backup')
-      || event.target.className.includes('mat-column-verify')
-      || event.target.className.includes('mat-column-upload');
+      || event.target.className.includes('mat-column-verify');
     if (flgButtonsClicked) { return; }
     const selChannel = this.channels.data.filter(channel => {
       return channel.chan_id === selRow.chan_id;

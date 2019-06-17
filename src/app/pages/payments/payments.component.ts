@@ -78,7 +78,7 @@ export class PaymentsComponent implements OnInit, OnDestroy {
       });
       setTimeout(() => { this.flgAnimate = false; }, 3000);
       if (this.flgLoading[0] !== 'error') {
-        this.flgLoading[0] = (undefined !== this.paymentJSONArr[0]) ? false : true;
+        this.flgLoading[0] = (undefined !== this.paymentJSONArr) ? false : true;
       }
       this.logger.info(rtlStore);
     });

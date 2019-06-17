@@ -9,11 +9,11 @@ exports.getBackup = (req, res, next) => {
   let channel_backup_file = '';
   let message = '';
   if (req.params.channelPoint === 'ALL') {
-    message = 'All Channels Backup Successful';
+    message = 'All Channels Backup Successful!';
     channel_backup_file = common.selectedNode.channel_backup_path + '/all-channels.bak';
     options.url = common.getSelLNDServerUrl() + '/channels/backup';
   } else {
-    message = 'Channel ' + req.params.channelPoint + ' Backup Successful';
+    message = 'Channel ' + req.params.channelPoint + ' Backup Successful!';
     channel_backup_file = common.selectedNode.channel_backup_path + '/channel-' + req.params.channelPoint.replace(':', '-') + '.bak';
     let channelpoint = req.params.channelPoint.replace(':', '/');
     options.url = common.getSelLNDServerUrl() + '/channels/backup/' + channelpoint;
@@ -32,7 +32,7 @@ exports.getBackup = (req, res, next) => {
   }
   request(options).then(function (body) {
     logger.info('\r\nChannels Backup: 16: ' + new Date().toJSON().slice(0,19) + ': INFO: Channel Backup: ' + JSON.stringify(body));
-    fs.appendFile(channel_backup_file, JSON.stringify(body), function(err) {
+    fs.writeFile(channel_backup_file, JSON.stringify(body), function(err) {
       if (err) {
         return res.status(500).json({ message: 'Channels Backup Failed!', error: err.error });
       } else {
@@ -56,7 +56,7 @@ exports.postBackupVerify = (req, res, next) => {
   let message = '';
   let verify_backup = '';
   if (req.params.channelPoint === 'ALL') {
-    message = 'All Channels Verify Successful';
+    message = 'All Channels Verify Successful!';
     channel_verify_file = common.selectedNode.channel_backup_path + '/all-channels.bak';
     let exists = fs.existsSync(channel_verify_file);
     if (exists) {
@@ -73,7 +73,7 @@ exports.postBackupVerify = (req, res, next) => {
       res.status(404).json({ message: 'Channels backup to verify does not Exist!' });
     }
   } else {
-    message = 'Channel ' + req.params.channelPoint + ' Verify Successful';
+    message = 'Channel ' + req.params.channelPoint + ' Verify Successful!';
     channel_verify_file = common.selectedNode.channel_backup_path + '/channel-' + req.params.channelPoint.replace(':', '-') + '.bak';
     let exists = fs.existsSync(channel_verify_file);
     if (exists) {
@@ -97,21 +97,4 @@ exports.postBackupVerify = (req, res, next) => {
       });
     });
   }
-};
-
-exports.uploadBackup = (req, res, next) => {
-  options = common.getOptions();
-  res.status(201).json('Successful');
-  // let channelpoint = (req.params.channelPoint === 'ALL') ? '' : req.params.channelPoint.replace(':', '/');
-  // request.post(options).then(function (body) {
-  //   logger.info('\r\nChannels: 276: ' + new Date().toJSON().slice(0,19) + ': INFO: Channel Upload: ' + JSON.stringify(body));
-  //   res.status(200).json(body);
-  // })
-  // .catch(function (err) {
-  //   logger.info('\r\nChannels: 280: ' + new Date().toJSON().slice(0,19) + ': ERROR: Channel Upload: ' + JSON.stringify(err));
-  //   return res.status(500).json({
-  //     message: 'Channels Upload Failed!',
-  //     error: err.error
-  //   });
-  // });
 };

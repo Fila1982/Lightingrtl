@@ -48,10 +48,8 @@ export const CLOSE_CHANNEL = 'CLOSE_CHANNEL';
 export const REMOVE_CHANNEL = 'REMOVE_CHANNEL';
 export const BACKUP_CHANNELS = 'BACKUP_CHANNELS';
 export const VERIFY_CHANNELS = 'VERIFY_CHANNELS';
-export const UPLOAD_CHANNELS = 'UPLOAD_CHANNELS';
 export const BACKUP_CHANNELS_RES = 'BACKUP_CHANNELS_RES';
 export const VERIFY_CHANNELS_RES = 'VERIFY_CHANNELS_RES';
-export const UPLOAD_CHANNELS_RES = 'UPLOAD_CHANNELS_RES';
 export const FETCH_INVOICES = 'FETCH_INVOICES';
 export const SET_INVOICES = 'SET_INVOICES';
 export const SET_TOTAL_INVOICES = 'SET_TOTAL_INVOICES';
@@ -266,16 +264,11 @@ export class RemoveChannel implements Action {
 
 export class BackupChannels implements Action {
   readonly type = BACKUP_CHANNELS;
-  constructor(public payload: {channelPoint: string}) {}
+  constructor(public payload: {channelPoint: string, showMessage: string}) {}
 }
 
 export class VerifyChannels implements Action {
   readonly type = VERIFY_CHANNELS;
-  constructor(public payload: {channelPoint: string}) {}
-}
-
-export class UploadChannels implements Action {
-  readonly type = UPLOAD_CHANNELS;
   constructor(public payload: {channelPoint: string}) {}
 }
 
@@ -286,11 +279,6 @@ export class BackupChannelsRes implements Action {
 
 export class VerifyChannelsRes implements Action {
   readonly type = VERIFY_CHANNELS_RES;
-  constructor(public payload: string) {}
-}
-
-export class UploadChannelsRes implements Action {
-  readonly type = UPLOAD_CHANNELS_RES;
   constructor(public payload: string) {}
 }
 
@@ -468,8 +456,7 @@ export type RTLActions =
   FetchNetwork | SetNetwork |
   FetchChannels | SetChannels | SetPendingChannels | SetClosedChannels | UpdateChannels |
   SaveNewChannel | CloseChannel | RemoveChannel |
-  BackupChannels | VerifyChannels | UploadChannels |
-  BackupChannelsRes | VerifyChannelsRes | UploadChannelsRes |
+  BackupChannels | VerifyChannels | BackupChannelsRes | VerifyChannelsRes |
   FetchTransactions | SetTransactions |
   FetchInvoices | SetInvoices | SetTotalInvoices |
   FetchPayments | SetPayments | SendPayment |

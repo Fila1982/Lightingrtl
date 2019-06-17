@@ -11,7 +11,7 @@ var upperCase = require('upper-case');
 var logger = require('./controllers/logger');
 var connect = {};
 var errMsg = '';
-const channelsBackup = require('./controllers/channelsBackup');
+var request = require('request');
 
 connect.setDefaultConfig = () => {
   var homeDir = os.userInfo().homedir;
@@ -179,14 +179,12 @@ connect.validateSingleNodeConfig = (config) => {
     if(config.Settings.channelBackupPath !== '' &&  undefined !== config.Settings.channelBackupPath) {
       common.nodes[0].channel_backup_path = config.Settings.channelBackupPath;
     } else {
-      common.nodes[0].channel_backup_path = common.rtl_conf_file_path + '/backup/node-0';
+      common.nodes[0].channel_backup_path = common.rtl_conf_file_path + '\\backup';
     }
     try {
-      connect.createDirectory(node.Settings.channelBackupPath);
+      connect.createDirectory(common.nodes[0].channel_backup_path);
       let exists = fs.existsSync(common.nodes[0].channel_backup_path + '/all-channels.bak');
-      if (exists) {
-        fs.writeFile(common.nodes[0].channel_backup_path + '/all-channels.bak', '', () => { });
-      } else {
+      if (!exists) {
         try {
           var createStream = fs.createWriteStream(common.nodes[0].channel_backup_path + '/all-channels.bak');
           createStream.end();
@@ -281,13 +279,11 @@ connect.validateMultiNodeConfig = (config) => {
     common.nodes[idx].lnd_config_path = (undefined !== node.Authentication.lndConfigPath) ? node.Authentication.lndConfigPath : '';
     common.nodes[idx].bitcoind_config_path = (undefined !== node.Settings.bitcoindConfigPath) ? node.Settings.bitcoindConfigPath : '';
     common.nodes[idx].enable_logging = (undefined !== node.Settings.enableLogging) ? node.Settings.enableLogging : false;
-    common.nodes[idx].channel_backup_path = (undefined !== node.Settings.channelBackupPath) ? node.Settings.channelBackupPath : common.rtl_conf_file_path + '/backup/node-' + idx;
+    common.nodes[idx].channel_backup_path = (undefined !== node.Settings.channelBackupPath) ? node.Settings.channelBackupPath : common.rtl_conf_file_path + '\\backup\\node-' + node.index;
     try {
-      connect.createDirectory(node.Settings.channelBackupPath);
+      connect.createDirectory(common.nodes[idx].channel_backup_path);
       let exists = fs.existsSync(common.nodes[idx].channel_backup_path + '/all-channels.bak');
-      if (exists) {
-        fs.writeFile(common.nodes[idx].channel_backup_path + '/all-channels.bak', '', () => { });
-      } else {
+      if (!exists) {
         try {
           var createStream = fs.createWriteStream(common.nodes[idx].channel_backup_path + '/all-channels.bak');
           createStream.end();
@@ -482,6 +478,38 @@ connect.setServerConfiguration = () => {
     connect.setMultiNodeConfiguration(multiNodeConfFile);
     common.selectedNode = common.findNode(common.nodes[0].index);
   }
+  common.nodes.map(node => { connect.getAllNodeAllChannelBackup(node); });
 }
+
+connect.getAllNodeAllChannelBackup = (node) => {
+  let channel_backup_file = node.channel_backup_path + '/all-channels.bak';
+  let options = { 
+    url: node.lnd_server_url + '/channels/backup',
+    rejectUnauthorized: false,
+    json: true,
+    headers: {'Grpc-Metadata-macaroon': fs.readFileSync(node.macaroon_path + '/admin.macaroon').toString('hex')}
+  };
+  request(options, function (err, res, body) {
+    if (err) {
+      logger.error('\r\nConnect: 496: ' + new Date().toJSON().slice(0,19) + ': ERROR: Channel Backup Response Failed: ' + JSON.stringify(err));
+    } else {
+      fs.writeFile(channel_backup_file, JSON.stringify(body), function(err) {
+        if (err) {
+          if (node.ln_node) {
+            logger.error('\r\nConnect: 501: ' + new Date().toJSON().slice(0,19) + ': ERROR: Channel Backup Failed for Node ' + node.ln_node + ' with error response: ' + JSON.stringify(err));
+          } else {
+            logger.error('\r\nConnect: 503: ' + new Date().toJSON().slice(0,19) + ': ERROR: Channel Backup Failed: ' + JSON.stringify(err));
+          }
+        } else {
+          if (node.ln_node) {
+            logger.info('\r\nConnect: 507: ' + new Date().toJSON().slice(0,19) + ': INFO: Channel Backup Successful for Node: ' + node.ln_node);
+          } else {
+            logger.info('\r\nConnect: 509: ' + new Date().toJSON().slice(0,19) + ': INFO: Channel Backup Successful');
+          }
+        }
+      });
+    }
+  })
+};
 
 module.exports = connect;

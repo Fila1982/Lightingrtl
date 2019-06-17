@@ -45,7 +45,7 @@ export class RTLEffects implements OnDestroy {
   closeSpinner = this.actions$.pipe(
     ofType(RTLActions.CLOSE_SPINNER),
     map((action: RTLActions.CloseSpinner) => {
-      this.dialogRef.close();
+      if (this.dialogRef) { this.dialogRef.close(); }
     }
   ));
 
@@ -61,7 +61,7 @@ export class RTLEffects implements OnDestroy {
   closeAlert = this.actions$.pipe(
     ofType(RTLActions.CLOSE_ALERT),
     map((action: RTLActions.CloseAlert) => {
-      this.dialogRef.close();
+      if (this.dialogRef) { this.dialogRef.close(); }
     }
   ));
 
@@ -298,9 +298,9 @@ export class RTLEffects implements OnDestroy {
         map((postRes: any) => {
           this.logger.info(postRes);
           this.store.dispatch(new RTLActions.CloseSpinner());
-          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: 'Channel Added Successfully!'}}));
           this.store.dispatch(new RTLActions.FetchBalance('blockchain'));
           this.store.dispatch(new RTLActions.FetchChannels({routeParam: 'all'}));
+          this.store.dispatch(new RTLActions.BackupChannels({channelPoint: 'ALL', showMessage: 'Channel Added Successfully!'}));
           return {
             type: RTLActions.FETCH_CHANNELS,
             payload: {routeParam: 'pending', channelStatus: ''}
@@ -363,7 +363,6 @@ export class RTLEffects implements OnDestroy {
         map((postRes: any) => {
           this.logger.info(postRes);
           this.store.dispatch(new RTLActions.CloseSpinner());
-          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: 'Channel Closed Successfully!'}}));
           this.store.dispatch(new RTLActions.FetchBalance('channels'));
           this.store.dispatch(new RTLActions.FetchBalance('blockchain'));
           this.store.dispatch(new RTLActions.FetchChannels({routeParam: 'all'}));
@@ -372,6 +371,7 @@ export class RTLEffects implements OnDestroy {
           } else {
             this.store.dispatch(new RTLActions.FetchChannels({routeParam: 'closed'}));
           }
+          this.store.dispatch(new RTLActions.BackupChannels({channelPoint: 'ALL', showMessage: 'Channel Closed Successfully!'}));
           return {
             type: RTLActions.REMOVE_CHANNEL,
             payload: { channelPoint: action.payload.channelPoint }
@@ -402,7 +402,7 @@ export class RTLEffects implements OnDestroy {
         map((postRes: any) => {
           this.logger.info(postRes);
           this.store.dispatch(new RTLActions.CloseSpinner());
-          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: postRes.message}}));
+          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: action.payload.showMessage + ' ' + postRes.message}}));
           return {
             type: RTLActions.BACKUP_CHANNELS_RES,
             payload: postRes.message
@@ -415,7 +415,7 @@ export class RTLEffects implements OnDestroy {
           return of(
             {
               type: RTLActions.OPEN_ALERT,
-              payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Backup Channel. Try again later.',
+              payload: { width: '70%', data: {type: 'ERROR', titleMessage: action.payload.showMessage + ' ' + 'Unable to Backup Channel. Try again later.',
                 message: JSON.stringify({code: err.status, Message: err.error.message})}}
             }
           );
@@ -449,38 +449,6 @@ export class RTLEffects implements OnDestroy {
               type: RTLActions.OPEN_ALERT,
               payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Verify Channel. Try again later.',
                 message: JSON.stringify({code: err.status, Message: err.error.message})}}
-            }
-          );
-        })
-      );
-    }
-  ));
-
-  @Effect()
-  uploadChannels = this.actions$.pipe(
-    ofType(RTLActions.UPLOAD_CHANNELS),
-    mergeMap((action: RTLActions.UploadChannels) => {
-      this.store.dispatch(new RTLActions.ClearEffectError('UploadChannels'));
-      return this.httpClient.post(environment.CHANNELS_BACKUP_API + '/upload/' + action.payload.channelPoint, {})
-      .pipe(
-        map((postRes: any) => {
-          this.logger.info(postRes);
-          this.store.dispatch(new RTLActions.CloseSpinner());
-          this.store.dispatch(new RTLActions.OpenAlert({ width: '70%', data: {type: 'SUCCESS', titleMessage: postRes.message}}));
-          return {
-            type: RTLActions.UPLOAD_CHANNELS_RES,
-            payload: postRes.message
-          };
-        }),
-        catchError((err: any) => {
-          this.store.dispatch(new RTLActions.CloseSpinner());
-          this.logger.error(err);
-          this.store.dispatch(new RTLActions.EffectError({ action: 'UploadChannels', code: err.status, message: err.error.error }));
-          return of(
-            {
-              type: RTLActions.OPEN_ALERT,
-              payload: { width: '70%', data: {type: 'ERROR', titleMessage: 'Unable to Upload Channel. Try again later.',
-                message: JSON.stringify({code: err.status, Message: err.error.error})}}
             }
           );
         })

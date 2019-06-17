@@ -82,7 +82,7 @@ export class InvoicesComponent implements OnInit, OnDestroy {
       this.logger.info(rtlStore);
       this.loadInvoicesTable(rtlStore.invoices.invoices);
       if (this.flgLoading[0] !== 'error') {
-        this.flgLoading[0] = (undefined !== rtlStore.invoices.invoices[0]) ? false : true;
+        this.flgLoading[0] = (undefined !== rtlStore.invoices) ? false : true;
       }
     });
 

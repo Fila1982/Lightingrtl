@@ -47,4 +47,4 @@ export const routes: Routes = [
   { path: '**', component: NotFoundComponent }
 ];
 
-export const routing: ModuleWithProviders = RouterModule.forRoot(routes, { enableTracing: true });
+export const routing: ModuleWithProviders = RouterModule.forRoot(routes);
